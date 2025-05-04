@@ -1,0 +1,46 @@
+Job Title: Software Engineer - Backend Services
+
+Location: Remote (US Based)
+
+Company Overview:
+Tech Solutions Inc. is a fast-growing technology company focused on building innovative cloud-based solutions for the logistics industry. We foster a collaborative environment where engineers can make a significant impact.
+
+Role Summary:
+We are seeking a motivated Backend Software Engineer to join our core services team. You will be responsible for designing, developing, testing, deploying, and maintaining robust and scalable backend systems that power our main platform. You will work closely with product managers, frontend engineers, and other stakeholders to deliver high-quality features.
+
+Responsibilities:
+- Design, build, and maintain efficient, reusable, and reliable backend code (primarily in Python).
+- Develop and manage RESTful APIs for internal and external consumption.
+- Integrate with third-party services and APIs.
+- Work with databases (SQL and NoSQL) to store and retrieve data efficiently.
+- Write unit tests, integration tests, and end-to-end tests to ensure code quality.
+- Participate in code reviews to maintain code quality and share knowledge.
+- Collaborate with frontend developers to integrate user-facing elements with server-side logic.
+- Troubleshoot and debug production issues.
+- Contribute to architectural decisions and technology choices.
+- Stay up-to-date with emerging technologies and industry trends.
+
+Required Qualifications:
+- Bachelor's degree in Computer Science, Engineering, or a related field, or equivalent practical experience.
+- 2+ years of professional software development experience.
+- Strong proficiency in Python.
+- Experience building and consuming RESTful APIs.
+- Solid understanding of database concepts (SQL required, experience with PostgreSQL is a plus).
+- Experience with version control systems, particularly Git.
+- Familiarity with software development best practices (testing, CI/CD, code reviews).
+- Strong problem-solving and analytical skills.
+- Excellent communication and teamwork abilities.
+
+Preferred Qualifications:
+- Experience with cloud platforms like AWS, Azure, or GCP (AWS preferred).
+- Experience with containerization technologies (Docker, Kubernetes).
+- Knowledge of NoSQL databases (e.g., MongoDB, Redis).
+- Experience with message queuing systems (e.g., RabbitMQ, Kafka).
+- Familiarity with frameworks like Flask or Django.
+- Understanding of microservices architecture.
+
+Education:
+- Bachelor's degree in Computer Science or related field preferred.
+
+Equal Opportunity Employer:
+Tech Solutions Inc. is an equal opportunity employer. We celebrate diversity and are committed to creating an inclusive environment for all employees.

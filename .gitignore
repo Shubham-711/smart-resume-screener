@@ -1,0 +1,26 @@
+# Python cache and byte code
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Sensitive configuration
+.env
+instance/
+
+# Uploaded files (if stored locally)
+uploads/
+
+# Large data files / Source Data
+data/job_descriptions/job_descriptions.csv
+# Or more general:
+# data/**/*.csv
+
+# OS generated files
+.DS_Store
+Thumbs.db
+# ... other OS/IDE specific files ...
