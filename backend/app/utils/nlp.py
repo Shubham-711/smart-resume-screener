@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # --- Globals / Setup ---
 # Use the larger spaCy model for better NER
-NLP_MODEL_NAME = "en_core_web_lg"
+NLP_MODEL_NAME = "en_core_web_sm"
 # Sentence Transformer model for semantic similarity
 SENTENCE_MODEL_NAME = 'all-MiniLM-L6-v2'
 
@@ -97,12 +97,12 @@ nlp_model = load_spacy_model(NLP_MODEL_NAME)
 
 # Load the Sentence Transformer model if library is available
 sentence_model = None
-if SENTENCE_TRANSFORMERS_AVAILABLE:
-    try:
-        sentence_model = SentenceTransformer(SENTENCE_MODEL_NAME)
-        logger.info(f"SentenceTransformer model '{SENTENCE_MODEL_NAME}' loaded successfully.")
-    except Exception as e:
-        logger.error(f"Failed to load SentenceTransformer model '{SENTENCE_MODEL_NAME}': {e}", exc_info=True)
+#if SENTENCE_TRANSFORMERS_AVAILABLE:
+#    try:
+#        sentence_model = SentenceTransformer(SENTENCE_MODEL_NAME)
+#        logger.info(f"SentenceTransformer model '{SENTENCE_MODEL_NAME}' loaded successfully.")
+#    except Exception as e:
+#        logger.error(f"Failed to load SentenceTransformer model '{SENTENCE_MODEL_NAME}': {e}", exc_info=True)
         # sentence_model remains None
 
 # Load NLTK stopwords after attempting download
