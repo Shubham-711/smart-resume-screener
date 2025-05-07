@@ -82,14 +82,14 @@ def load_spacy_model(model_name):
 # --- Load Resources at Module Level ---
 nlp_model = load_spacy_model(NLP_MODEL_NAME)
 
-# Keep Sentence Transformer loading commented out for now
+
 sentence_model = None
-# if SENTENCE_TRANSFORMERS_AVAILABLE:
-#    try:
-#        sentence_model = SentenceTransformer(SENTENCE_MODEL_NAME)
-#        logger.info(f"SentenceTransformer model '{SENTENCE_MODEL_NAME}' loaded successfully.")
-#    except Exception as e:
-#        logger.error(f"Failed to load SentenceTransformer model '{SENTENCE_MODEL_NAME}': {e}", exc_info=True)
+if SENTENCE_TRANSFORMERS_AVAILABLE:
+    try:
+        sentence_model = SentenceTransformer(SENTENCE_MODEL_NAME)
+        logger.info(f"SentenceTransformer model '{SENTENCE_MODEL_NAME}' loaded successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load SentenceTransformer model '{SENTENCE_MODEL_NAME}': {e}", exc_info=True)
 
 stop_words = set()
 try:
