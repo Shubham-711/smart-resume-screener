@@ -1,25 +1,43 @@
 # backend/app/tasks.py
 
-import os # Import os module here, as it's used for path joining
+import os 
 from .extensions import celery, db
 from .models import Resume, Job, StatusEnum
 from .utils.parsers import extract_text_from_file
 # Import the ENHANCED scoring function from nlp utils
 from .utils.nlp import calculate_enhanced_relevance
+import time
 import logging
-import time # For simulating work or adding delays
+
 
 # Use Celery's logger or standard Python logging for tasks
 logger = logging.getLogger(__name__) # Get logger for this module
 
 
-# Define Celery task with name, retries, etc.
 @celery.task(bind=True, name='app.tasks.process_resume', max_retries=3, default_retry_delay=60,
              acks_late=True, task_reject_on_worker_lost=True)
 def process_resume(self, resume_id, job_id):
-    """Celery task to process a single resume: parse, analyze, score."""
-    task_id = self.request.id or 'unknown' # Get task ID if available
+    task_id = self.request.id or 'unknown'
     logger.info(f"[Task ID: {task_id}] Starting processing for Resume ID: {resume_id}, Job ID: {job_id}")
+
+    retries = 0
+    MAX_DB_FETCH_RETRIES = 3 # Try 3 times
+    RETRY_DB_FETCH_DELAY = 1 # Wait 1 second between tries
+
+    resume = None
+    while retries < MAX_DB_FETCH_RETRIES and resume is None:
+        resume = Resume.query.get(resume_id)
+        if resume is None:
+            retries += 1
+            if retries < MAX_DB_FETCH_RETRIES:
+                 logger.warning(f"[Task ID: {task_id}] Resume ID {resume_id} not found on attempt {retries}. Waiting {RETRY_DB_FETCH_DELAY}s before retry...")
+                 time.sleep(RETRY_DB_FETCH_DELAY) # Add import time at the top
+        else:
+            break # Found it!
+
+    if resume is None: # Check after retries
+        logger.error(f"[Task ID: {task_id}] Resume ID {resume_id} not found in database after {MAX_DB_FETCH_RETRIES} attempts. Aborting task.")
+        return {'status': 'FAILED', 'error': 'Resume database record not found'}
 
     # Fetch objects from DB
     resume = Resume.query.get(resume_id)
