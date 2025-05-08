@@ -1,68 +1,84 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { fetchJobDetails } from '../api/apiService';
-import ResumeList from '../components/ResumeList'; // Assuming these exist
-import ResumeUpload from '../components/ResumeUpload'; // Assuming these exist
+// frontend/src/pages/JobDetailPage.jsx
 
-// Remove inline styles, use classes
-const pageContainerStyle = { padding: '20px' };
-const sectionStyle = { marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #555'};
-const errorStyle = { color: 'red', border: '1px solid red', padding: '10px', marginTop: '10px' };
-const descriptionStyle = { whiteSpace: 'pre-wrap', backgroundColor: '#282c34', padding: '10px', borderRadius: '5px', border: '1px solid #444' }; // Added border
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link as RouterLink } from 'react-router-dom';
+import { fetchJobDetails } from '../api/apiService';
+// MUI Components
+import { Box, Typography, Paper, Button, CircularProgress, Alert, Divider } from '@mui/material';
+
+// --- IMPORT THE COMPONENTS ---
+import ResumeList from '../components/ResumeList'; // Adjust path if needed
+import ResumeUpload from '../components/ResumeUpload'; // Adjust path if needed
+// ---------------------------
 
 function JobDetailPage() {
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  // State to trigger refresh of ResumeList after upload
+  const [refreshCounter, setRefreshCounter] = useState(0); // Key state
 
   const loadJobDetails = useCallback(async () => {
-      // ... (keep existing fetch logic) ...
+      // ... (keep existing fetch logic for job details) ...
        if (!jobId) return; try { setLoading(true); setError(null); const response = await fetchJobDetails(jobId); setJob(response.data); } catch (err) { console.error(`Error fetching job details for ID ${jobId}:`, err); if (err.response && err.response.status === 404) setError(`Job with ID ${jobId} not found.`); else if (err.request) setError('Failed to fetch job details: No response from server.'); else setError(`Failed to fetch job details: ${err.message}`); setJob(null); } finally { setLoading(false); }
   }, [jobId]);
 
   useEffect(() => { loadJobDetails(); }, [loadJobDetails]);
 
-  const handleUploadSuccess = () => { setRefreshCounter(prev => prev + 1); };
+  // Callback function for ResumeUpload component to trigger refresh
+  const handleUploadSuccess = () => {
+    console.log('Upload successful in parent, incrementing refresh key...');
+    setRefreshCounter(prev => prev + 1); // Increment key to force ResumeList re-mount
+  };
 
-  if (loading) { return <div style={pageContainerStyle}>Loading job details...</div>; }
-  if (error) { return <div style={pageContainerStyle}><div style={errorStyle}>Error: {error}</div></div>; }
-  if (!job) { return <div style={pageContainerStyle}>Job data could not be loaded.</div>; }
+  // --- Render Logic ---
+  if (loading) { /* ... loading indicator ... */
+    return ( <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}> <CircularProgress /> </Box> );
+  }
+  if (error) { /* ... error display ... */
+    return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+  }
+  if (!job) { /* ... no job data ... */
+    return <Typography sx={{ p: 3 }}>Job data could not be loaded.</Typography>;
+  }
 
   return (
-    <div style={pageContainerStyle}>
-      {/* --- APPLY glass-card TO JOB DETAILS --- */}
-      <div className="glass-card">
-        <h2>Job Details: {job.title}</h2>
-        <p><strong>ID:</strong> {job.id}</p>
-        <p><strong>Created:</strong> {new Date(job.created_at).toLocaleString()}</p>
-        <p><strong>Required Years:</strong> {job.required_years ?? 'N/A'}</p>
-        <h3>Description:</h3>
-        <p style={descriptionStyle}> {/* Keep specific style for pre-wrap */}
-          {job.description}
-        </p>
-      </div>
-      {/* -------------------------------------- */}
+    <Box>
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        {/* ... Job Details content (Title, Description, etc.) ... */}
+        <Typography variant="h4" component="h1" gutterBottom> Job Details: {job.title} </Typography>
+        {/* ... other details ... */}
+      </Paper>
 
-      <div style={sectionStyle}>
-        <h3>Upload Resumes</h3>
-         {/* Assume ResumeUpload might have its own card styling or apply glass-card */}
+      <Divider sx={{ my: 3 }} />
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" component="h2" gutterBottom>
+          Upload Resumes
+        </Typography>
+        {/* --- RENDER ResumeUpload COMPONENT --- */}
+        {/* Pass jobId and the callback function */}
         <ResumeUpload jobId={job.id} onUploadSuccess={handleUploadSuccess} />
-      </div>
+        {/* --------------------------------------- */}
+      </Box>
 
-      <div style={sectionStyle}>
-        <h3>Screening Results</h3>
-         {/* Assume ResumeList handles its item styling or apply glass-card to container */}
+      <Divider sx={{ my: 3 }} />
+
+      <Box>
+        <Typography variant="h5" component="h2" gutterBottom>
+          Screening Results
+        </Typography>
+         {/* --- RENDER ResumeList COMPONENT --- */}
+         {/* Pass jobId AND the key prop */}
          <ResumeList jobId={job.id} key={refreshCounter} />
-      </div>
+         {/* ----------------------------------- */}
+      </Box>
 
-       <Link to="/">
-          {/* --- APPLY glow-button CLASS HERE --- */}
-          <button className="glow-button" style={{ marginTop: '20px' }}>Back to Job List</button>
-          {/* ------------------------------------ */}
-       </Link>
-    </div>
+       <Button component={RouterLink} to="/" variant="outlined" color="primary" sx={{ mt: 3 }}>
+          Back to Job List
+       </Button>
+    </Box>
   );
 }
 
