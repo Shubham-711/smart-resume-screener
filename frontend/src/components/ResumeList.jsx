@@ -97,8 +97,13 @@ function ResumeList({ jobId }) { // Accept jobId as a prop
   // --- Render Logic ---
   return (
     <div style={listContainerStyle}>
-      <button onClick={loadResumes} disabled={loading} style={refreshButtonStyle}>
-        {loading ? 'Refreshing...' : 'Refresh List'}
+
+      <button
+           onClick={loadResumes} // <<< ADD THIS onClick HANDLER
+           disabled={loading}
+            style={refreshButtonStyle}
+            >
+               {loading ? 'Refreshing...' : 'Refresh List'}
       </button>
       {error && <p style={errorStyle}>Error loading resumes: {error}</p>}
 
