@@ -1,35 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import JobListPage from './pages/JobListPage'; // Create this page next
+import JobDetailPage from './pages/JobDetailPage'; // Create this page next
+import CreateJobPage from './pages/CreateJobPage'; // Create this page next
+// Optional: Import a layout component if you have one
+// import MainLayout from './layouts/MainLayout';
+
+// Basic styling (replace with proper CSS/UI library later)
+const navStyle = {
+  backgroundColor: '#333',
+  padding: '1rem',
+  marginBottom: '1rem',
+};
+
+const linkStyle = {
+  color: 'white',
+  margin: '0 1rem',
+  textDecoration: 'none',
+};
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
+    <Router>
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        {/* Simple Navigation */}
+        <nav style={navStyle}>
+          <Link to="/" style={linkStyle}>Job List</Link>
+          <Link to="/create-job" style={linkStyle}>Create Job</Link>
+          {/* Add other links as needed */}
+        </nav>
+
+        {/* Route Definitions */}
+        {/* Optional: Wrap Routes in a Layout component */}
+        {/* <MainLayout> */}
+        <Routes>
+          <Route path="/" element={<JobListPage />} />
+          <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+          <Route path="/create-job" element={<CreateJobPage />} />
+          {/* Add other routes */}
+          {/* Example for a 404 page */}
+          {/* <Route path="*" element={<NotFoundPage />} /> */}
+        </Routes>
+        {/* </MainLayout> */}
+
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </Router>
+  );
 }
 
-export default App
+export default App;
