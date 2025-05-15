@@ -5,21 +5,26 @@ import { useNavigate } from 'react-router-dom';
 import { createJob } from '../api/apiService';
 import { Box, Typography, TextField, Button, CircularProgress, Alert, Paper } from '@mui/material';
 
-// Define sx styles reusable within this component (or move to a shared file)
-const glassCardSx = { // Using Paper as the card base here
-  p: { xs: 2, sm: 3 }, // Responsive padding
-  backgroundColor: 'rgba(31, 35, 44, 0.6)',
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '12px',
+// sx prop for Paper component (form container)
+const formPaperSx = {
+  p: { xs: 2, sm: 3, md: 4 }, // Responsive padding
+  backgroundColor: 'background.paper', // Use theme paper color for slight contrast
+  // For glassmorphism (can be added later if performance allows)
+  // backgroundColor: 'rgba(31, 35, 44, 0.75)',
+  // backdropFilter: 'blur(8px)',
+  // WebkitBackdropFilter: 'blur(8px)',
+  // border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: '12px', // Slightly more rounded
+  maxWidth: '700px', // Limit form width
+  mx: 'auto',        // Center the Paper itself
+  mt: 2
 };
 
 const glowButtonSx = {
   fontWeight: 'bold',
-  mt: 2,
+  // mt: 2, // Margin top will be handled by the button container Box
   mb: 1,
-  minWidth: '120px', // Give button some minimum width
+  minWidth: '120px',
   boxShadow: {
     xs: 'none',
     ':hover': theme => `0 0 12px ${theme.palette.primary.main}, 0 0 25px ${theme.palette.primary.main}`
@@ -50,16 +55,15 @@ function CreateJobPage() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom align="center">
         Create New Job Posting
       </Typography>
 
-      {/* Apply glassCardSx to the Paper component */}
-      <Paper elevation={0} sx={glassCardSx}> {/* elevation 0 if using border/backdrop */}
+      <Paper elevation={3} sx={formPaperSx}>
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <TextField
             label="Job Title"
-            variant="outlined" // Or "filled" or "standard"
+            variant="outlined"
             fullWidth
             required
             value={title}
@@ -79,47 +83,55 @@ function CreateJobPage() {
             margin="normal"
             disabled={isLoading}
           />
-          <TextField
-            label="Required Years (Optional)"
-            variant="outlined"
-            type="number"
-            value={requiredYears}
-            onChange={(e) => setRequiredYears(e.target.value)}
-            margin="normal"
-            InputProps={{ inputProps: { min: 0 } }}
-            sx={{ width: { xs: '100%', sm: '200px' } }} // Responsive width
-            disabled={isLoading}
-          />
-          <Box sx={{ mt: 2, position: 'relative', display: 'inline-block' }}> {/* Container for button + spinner */}
-            <Button
-              type="submit"
-              variant="contained" // Contained button often looks better with glow
-              color="primary"
+
+          {/* --- MODIFIED ROW FOR YEARS AND BUTTON --- */}
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Left side: Required Years */}
+            <TextField
+              label="Required Years (Optional)"
+              variant="outlined"
+              type="number"
+              value={requiredYears}
+              onChange={(e) => setRequiredYears(e.target.value)}
+              // margin="normal" // Margin is now handled by the parent Box's gap or TextField's sx
+              InputProps={{ inputProps: { min: 0 } }}
+              sx={{ width: { xs: '150px', sm: '200px' } }} // Keep it relatively small
               disabled={isLoading}
-              sx={glowButtonSx} // Apply glow style
-            >
-              {/* Add padding for spinner */}
-              <Box component="span" sx={{ visibility: isLoading ? 'hidden' : 'visible' }}>
-                 Create Job
-              </Box>
-            </Button>
-            {isLoading && (
-              <CircularProgress
-                size={24}
-                sx={{
-                  color: 'primary.main', // Use theme color
-                  position: 'absolute',
-                  top: '50%', left: '50%',
-                  marginTop: '-12px', marginLeft: '-12px',
-                }}
-              />
-            )}
+            />
+
+            {/* Right side: Button + Spinner */}
+            <Box sx={{ position: 'relative', display: 'inline-block' }}> {/* Keep spinner relative to button */}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={isLoading}
+                sx={glowButtonSx} // Assuming glowButtonSx is defined
+              >
+                <Box component="span" sx={{ visibility: isLoading ? 'hidden' : 'visible' }}>
+                   Create Job
+                </Box>
+              </Button>
+              {isLoading && (
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    color: 'primary.main',
+                    position: 'absolute',
+                    top: '50%', left: '50%',
+                    marginTop: '-12px', marginLeft: '-12px',
+                  }}
+                />
+              )}
+            </Box>
           </Box>
+          {/* --------------------------------------- */}
+
         </Box>
       </Paper>
 
-      {successMessage && <Alert severity="success" sx={{ mt: 2 }}>{successMessage}</Alert>}
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      {successMessage && <Alert severity="success" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>{successMessage}</Alert>}
+      {error && <Alert severity="error" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>{error}</Alert>}
     </Box>
   );
 }

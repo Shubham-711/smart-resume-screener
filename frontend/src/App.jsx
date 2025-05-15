@@ -1,10 +1,8 @@
 // frontend/src/App.jsx
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
-// MUI Components
-import { AppBar, Toolbar, Container, Button, Box, CssBaseline } from '@mui/material'; // Added CssBaseline here too just in case
-// Import Pages
+import { AppBar, Toolbar, Container, Button, Box, Typography, CssBaseline } from '@mui/material';
+import HomePage from './pages/HomePage';
 import JobListPage from './pages/JobListPage';
 import JobDetailPage from './pages/JobDetailPage';
 import CreateJobPage from './pages/CreateJobPage';
@@ -12,52 +10,99 @@ import CreateJobPage from './pages/CreateJobPage';
 function App() {
   return (
     <Router>
-      <CssBaseline /> {/* Ensure baseline styles */}
-      <AppBar position="fixed" elevation={2} sx={{
-          // Glass effect for AppBar
-          backgroundColor: 'rgba(22, 24, 29, 0.8)', // Dark transparent background
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)', // Safari
-        }}>
-        <Container maxWidth="lg"> {/* Constrain toolbar content */}
-          <Toolbar disableGutters> {/* disableGutters removes default padding */}
-            {/* Logo/Title Placeholder */}
-            <Typography variant="h6" noWrap component="div" sx={{ mr: 2, flexGrow: { xs: 1, md: 0} }}> {/* Adjust flexGrow */}
+      <CssBaseline />
+      <AppBar
+        position="fixed"
+        elevation={1}
+        sx={{
+          backgroundColor: (theme) => theme.palette.background.paper,
+          opacity: 0.95,
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Toolbar disableGutters>
+            <Typography
+              variant="h6"
+              noWrap
+              component={NavLink}
+              to="/"
+              sx={{
+                mr: 2,
+                display: { xs: 'none', md: 'flex' },
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                letterSpacing: '.1rem',
+                color: 'text.primary', // Should be white from theme
+                textDecoration: 'none',
+                '&:hover': {
+                    color: 'primary.light'
+                }
+              }}
+            >
               Resume Screener
             </Typography>
 
-            {/* Navigation Links */}
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'flex-end', md: 'flex-start'} }}> {/* Adjust layout */}
+            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'flex-end', md: 'flex-start' } }}>
               <Button
                 component={NavLink}
-                to="/"
-                sx={{ color: 'text.secondary', mr: 1, '&.active': { color: 'primary.main', fontWeight: 'bold' } }}
+                to="/jobs"
+                end 
+                // Remove color="primary" prop if it was there by default
+                // Or explicitly set a color that results in white text
+                // color="inherit" // This will inherit the AppBar's text color (usually white)
+                sx={(theme) => ({
+                  my: 2,
+                  mx: 1.5,
+                  color: theme.palette.text.primary, // <<< EXPLICITLY use primary text color (white)
+                  display: 'block',
+                  '&.active': { // Style for active NavLink
+                    color: theme.palette.primary.main, // Active link uses primary theme color
+                    fontWeight: 'bold',
+                  },
+                  '&:hover:not(.active)': { // Hover for non-active links
+                    backgroundColor: 'action.hover', // Subtle background on hover
+                    // color: theme.palette.text.secondary, // Optional: slightly dimmer text on hover
+                  }
+                })}
               >
                 Job List
               </Button>
               <Button
                 component={NavLink}
                 to="/create-job"
-                sx={{ color: 'text.secondary', '&.active': { color: 'primary.main', fontWeight: 'bold' } }}
+                // color="inherit"
+                sx={(theme) => ({
+                  my: 2,
+                  mx: 1.5,
+                  color: theme.palette.text.primary, // <<< EXPLICITLY use primary text color (white)
+                  display: 'block',
+                  '&.active': {
+                    color: theme.palette.primary.main, // Active link uses primary theme color
+                    fontWeight: 'bold',
+                  },
+                  '&:hover:not(.active)': {
+                    backgroundColor: 'action.hover',
+                  }
+                })}
               >
                 Create Job
               </Button>
             </Box>
-            {/* Future Auth Button can go here */}
           </Toolbar>
         </Container>
       </AppBar>
 
-      {/* Offset content below AppBar */}
+      {/* ... rest of the App.jsx ... */}
       <Toolbar />
-
-      {/* Main content area */}
-      <Container component="main" maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+      <Container component="main" maxWidth="lg" sx={{ mt: 4, mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Routes>
-          <Route path="/" element={<JobListPage />} />
+        <Route path="/" element={<HomePage />} /> {/* <<< NEW: Root route is HomePage */}
+        <Route path="/jobs" element={<JobListPage />} /> {/* <<< NEW: Job List is now at /jobs */}
           <Route path="/jobs/:jobId" element={<JobDetailPage />} />
           <Route path="/create-job" element={<CreateJobPage />} />
-          <Route path="*" element={<Box sx={{ p: 3 }}><Typography variant="h4">404 Page Not Found</Typography></Box>} />
+          <Route path="*" element={<Typography variant="h4" align="center" sx={{ mt: 5 }}>404 Page Not Found</Typography>} />
         </Routes>
       </Container>
     </Router>
@@ -65,6 +110,3 @@ function App() {
 }
 
 export default App;
-
-// Import Typography if not already imported
-import { Typography } from '@mui/material';
