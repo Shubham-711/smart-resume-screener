@@ -31,6 +31,7 @@ function JobListPage() {
     const loadJobs = async () => {
       try {
         setLoading(true); setError(null);
+         console.log('FROM JobListPage.jsx -> Calling fetchJobs()');
         const response = await fetchJobs();
         setJobs(response.data || []);
       } catch (err) {
