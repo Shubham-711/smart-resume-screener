@@ -17,9 +17,9 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     logging.error("CRITICAL: sentence-transformers library or its dependencies (like torch) not found. "
-                  "Semantic similarity WILL NOT WORK. Install with: pip install sentence-transformers torch", exc_info=False) # Less verbose on startup
+                  "Semantic similarity WILL NOT WORK. Install with: pip install sentence-transformers torch", exc_info=False)
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    SentenceTransformer = None
+    SentenceTransformer = None # Define for graceful failure if calculate_semantic_similarity is called
     util = None
     torch = None
 
@@ -27,14 +27,14 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # --- NLTK Resource Checks ---
-def ensure_nltk_resource(resource_id_path, resource_name_for_log):
+def ensure_nltk_resource(resource_id_path, resource_name_for_log): # resource_id_path e.g. 'tokenizers/punkt'
     try:
         nltk.data.find(resource_id_path)
         logger.debug(f"NLTK resource '{resource_name_for_log}' found.")
     except LookupError:
         logger.info(f"NLTK resource '{resource_name_for_log}' not found. Downloading '{resource_id_path.split('/')[-1]}'...")
         try:
-            nltk.download(resource_id_path.split('/')[-1])
+            nltk.download(resource_id_path.split('/')[-1]) # e.g., download 'punkt' or 'stopwords'
             logger.info(f"NLTK resource '{resource_name_for_log}' downloaded successfully.")
         except Exception as e:
             logger.error(f"Failed to download NLTK resource '{resource_name_for_log}': {e}", exc_info=True)
@@ -45,7 +45,7 @@ ensure_nltk_resource('tokenizers/punkt', 'punkt tokenizer data')
 ensure_nltk_resource('corpora/stopwords', 'stopwords corpus')
 
 # --- Globals / Setup ---
-NLP_MODEL_NAME = "en_core_web_lg"
+NLP_MODEL_NAME = "en_core_web_lg" # Using large model as per your last successful load
 SENTENCE_MODEL_NAME = 'all-MiniLM-L6-v2'
 W_SEMANTIC = 0.35; W_SKILL = 0.45; W_EXPERIENCE = 0.20
 
@@ -79,9 +79,9 @@ if SENTENCE_TRANSFORMERS_AVAILABLE:
        logger.info(f"SentenceTransformer model '{SENTENCE_MODEL_NAME}' loaded successfully.")
    except Exception as e:
        logger.error(f"Failed to load SentenceTransformer model '{SENTENCE_MODEL_NAME}': {e}", exc_info=True)
-       SENTENCE_TRANSFORMERS_AVAILABLE = False
-       sentence_model = None
-else: logger.warning("SentenceTransformer library was not imported; semantic features disabled.")
+       SENTENCE_TRANSFORMERS_AVAILABLE = False # Set flag if model loading fails
+       sentence_model = None # Ensure it's None
+else: logger.warning("SentenceTransformer library was not imported; semantic features will be disabled.")
 
 stop_words = set()
 try:
@@ -90,7 +90,9 @@ try:
     logger.debug("NLTK English stopwords loaded.")
 except Exception as e: logger.error(f"Could not load NLTK stopwords: {e}")
 
+
 # --- Skill Keywords ---
+# CRITICAL: MANUALLY CURATE THIS LIST BASED ON YOUR TARGET ROLES!
 SKILL_KEYWORDS = {
     # --- Core Programming & Scripting ---
     "python", "java", "javascript", "js", "ecmascript", "typescript", "ts",
@@ -198,7 +200,12 @@ SKILL_KEYWORDS = {
     "attention to detail", "creativity", "interpersonal skills", "presentation skills",
     "customer service", "client relations", "stakeholder management",
 
+    # --- Role Titles (Can help but also be noisy if not carefully used) ---
+    # "web developer", "backend developer", "frontend developer", "full stack developer", "software engineer",
+    # "devops engineer", "data engineer", "qa engineer", "mobile developer",
 }
+
+
 # --- Core NLP Function Definitions ---
 def preprocess_text(text):
     if not text: return ""
@@ -210,18 +217,18 @@ def preprocess_text(text):
 
 def get_targeted_text_for_skills(full_text, section_keywords):
     if not full_text: return ""
-    pattern_str = r"(?i)^\s*(?:" + "|".join(r"\b" + re.escape(kw) + r"\b" for kw in section_keywords) + r")\s*[:\-]?\s*\n(.*?)(?=\n\s*^\s*(?:" + "|".join(r"\b" + re.escape(kw) + r"\b" for kw in section_keywords) + r")\s*[:\-]?\s*\n|^\s*$)|\Z"
+    # Corrected pattern to be more robust for section endings and capture content properly
+    pattern_str = r"(?i)^\s*(?:" + "|".join(r"\b" + re.escape(kw) + r"\b" for kw in section_keywords) + r")\s*[:\-]?\s*\n(.*?)(?=\n\s*^\s*(?:" + "|".join(r"\b" + re.escape(next_kw) + r"\b" for next_kw in SKILL_KEYWORDS | set(section_keywords) | {"education", "projects", "summary", "awards", "publications", "references"}) + r")\s*[:\-]?\s*\n|^\s*$|\Z)"
     extracted_blocks = []
     try:
-        for match in re.finditer(pattern_str, full_text, re.MULTILINE):
+        for match in re.finditer(pattern_str, full_text, re.MULTILINE | re.DOTALL): # Added DOTALL
             if match.group(1): extracted_blocks.append(match.group(1).strip())
     except Exception as e: logger.error(f"Regex error in get_targeted_text_for_skills: {e}", exc_info=False)
     if extracted_blocks:
         combined_text = "\n\n".join(extracted_blocks)
-        logger.debug(f"Extracted targeted text (len: {len(combined_text)}) using: {section_keywords}")
+        logger.debug(f"Extracted targeted text for JD skills (len: {len(combined_text)}) using: {section_keywords}")
         return combined_text
-    else:
-        logger.debug(f"No sections found for keywords {section_keywords}, using full text."); return full_text
+    else: logger.debug(f"No JD sections found for skill keywords {section_keywords}, using full text for JD skill extraction."); return full_text
 
 def extract_skills(text):
     if not text: return []
@@ -238,93 +245,150 @@ def extract_skills(text):
                      matching_skill = next((s for s in SKILL_KEYWORDS if s.lower() == ent_text_lower), ent.text)
                      found_skills.add(matching_skill)
                 elif ent.label_ in ["ORG", "PRODUCT"] and ent.text in ["Microsoft", "Google", "Amazon Web Services", "AWS", "Azure", "React", "Angular", "Docker", "Kubernetes", "MySQL", "PostgreSQL", "MongoDB"]:
-                     found_skills.add(ent.text); logger.debug(f"NER found: {ent.text}")
+                     found_skills.add(ent.text); logger.debug(f"NER found relevant ORG/PRODUCT: {ent.text}")
         except Exception as e: logger.error(f"Error in NER skill extraction: {e}", exc_info=False)
     logger.debug(f"Extracted skills (from text len {len(text if text else '')}): {len(found_skills)} - {sorted(list(found_skills))}")
     return list(found_skills)
 
 # --- Experience Extraction Functions ---
 def extract_explicit_years_mention(text):
-    """Extracts explicit 'X years of experience' mentions using regex. Returns max found."""
-    if not text:
-        return 0
+    if not text: return 0
     pattern = r'(\d{1,2}(?:\.\d{1,2})?)\s*\+?\s*(?:years?|yrs?|year)(?:\s*(?:of|in|with)?\s*exp(?:erience)?)?'
     years_found = []
-    try: # Outer try for the whole findall operation
+    try:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match_group in matches:
-            num_str = match_group[0] # The number part
-            try: # Inner try for float conversion
+            num_str = match_group[0]
+            try:
                 years = float(num_str)
-                if 0 < years <= 50: # Basic sanity check
-                    years_found.append(years)
-            except ValueError: # This except matches the inner try
-                logger.debug(f"Could not convert '{num_str}' to float for explicit years.")
-                continue # Continue the for loop
-        # This block is now correctly outside the inner try-except, but inside the outer try
+                if 0 < years <= 50: years_found.append(years)
+            except ValueError: logger.debug(f"Could not convert '{num_str}' to float for explicit years."); continue
         if years_found:
-            max_years = max(years_found)
-            logger.debug(f"Explicit experience mentions found: {years_found}. Max: {max_years} years.")
-            return max_years
-        else:
-            logger.debug("No explicit 'X years of experience' pattern found by regex.")
-            return 0
-    except Exception as e: # This except matches the OUTER try
-        logger.error(f"Error during regex for explicit experience years: {e}", exc_info=True) # Log full traceback
-        return 0
+            max_years = max(years_found); logger.debug(f"Explicit experience mentions: {years_found}. Max: {max_years} years."); return max_years
+    except Exception as e: logger.error(f"Error regex explicit experience: {e}", exc_info=True); return 0
+    logger.debug("No explicit 'X years of experience' pattern found by regex.")
+    return 0
+
+# Inside backend/app/utils/nlp.py
+# Replace the existing extract_experience_durations_from_sections function
 
 def extract_experience_durations_from_sections(text_content):
-    if not text_content: return 0
+    if not text_content:
+        logger.debug("extract_experience_durations_from_sections: Received empty text_content.")
+        return 0
+
     total_experience_years = 0
-    experience_section_keywords = ["experience", "work history", "employment", "career history", "professional experience", "relevant experience", "positions held"]
-    education_section_keywords = ["education", "academic background", "qualifications", "degrees", "training", "courses", "certifications"]
-    document_sections = re.split(r'(^\s*(?:' + '|'.join(experience_section_keywords + education_section_keywords + ["skills", "projects", "summary", "objective", "awards", "publications"]) + r')\s*[:\-\s]*\n)', text_content, flags=re.MULTILINE | re.IGNORECASE)
+
+    experience_section_keywords = [
+        "Relevant Experience", "Experience", "Work History", "Employment History", "Work Experience"
+    ]
+    section_terminators = [
+        "Education", "Academic Background", "Degrees", "Certifications", "Skills",
+        "Technical Skills", "Projects", "OpenSource Contributions", "Achievements",
+        "Popular Blogs", "Awards", "Publications", "References", "Languages", "Summary",
+        "Objective", "Personal Details", "Contact"
+    ]
+
+    lines = text_content.splitlines()
     relevant_text_for_dates = ""
-    if len(document_sections) > 1:
-        is_experience_section = False
-        for i, section_part in enumerate(document_sections):
-            is_header = any(keyword.lower() in section_part.lower().strip() for keyword in (experience_section_keywords + education_section_keywords))
-            if is_header:
-                if any(exp_kw.lower() in section_part.lower() for exp_kw in experience_section_keywords):
-                    is_experience_section = True; logger.debug(f"Identified Exp Section Header: {section_part.strip().splitlines()[0]}")
-                elif any(edu_kw.lower() in section_part.lower() for edu_kw in education_section_keywords):
-                    is_experience_section = False; logger.debug(f"Identified Edu Section Header: {section_part.strip().splitlines()[0]}")
-                else: is_experience_section = False
-            elif is_experience_section and section_part.strip(): relevant_text_for_dates += section_part + "\n"
-    else: logger.warning("No clear Exp/Edu sections found, using full text for date parsing (may be inaccurate)."); relevant_text_for_dates = text_content
-    if not relevant_text_for_dates.strip(): logger.debug("No relevant text for date range parsing."); return 0
-    logger.debug(f"Text for date ranges (len {len(relevant_text_for_dates)}):\n---\n{relevant_text_for_dates[:300]}...\n---")
-    date_range_pattern = r"""(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{2,4}|\b\d{4}\b)\s*(?:to|-|–|—|until)\s*(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{2,4}|\b\d{4}\b|Present|Current|Till\sDate|To\sDate|Ongoing|Now)"""
-    date_flags = re.IGNORECASE | re.VERBOSE; parsed_durations = []
+    in_experience_section = False
+    experience_block_lines = []
+
+    logger.info("--- STARTING EXPERIENCE SECTION SEARCH ---")
+
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        line_lower = line_stripped.lower()
+
+        is_experience_header = any(kw.lower() in line_lower for kw in experience_section_keywords)
+        is_terminator_header = any(kw.lower() in line_lower for kw in section_terminators)
+
+        if is_experience_header:
+            logger.info(f"MATCHED Experience Header: '{line_stripped}' at line index {i}")
+            in_experience_section = True
+            experience_block_lines = []
+            continue
+
+        if is_terminator_header and in_experience_section:
+            logger.info(f"ENDER Found: '{line_stripped}' at line index {i}. Stopping experience block.")
+            in_experience_section = False
+            if experience_block_lines:
+                relevant_text_for_dates += "\n".join(experience_block_lines) + "\n\n"
+                experience_block_lines = []
+
+        if in_experience_section:
+            experience_block_lines.append(line_stripped)
+
+    if in_experience_section and experience_block_lines:
+        logger.info("End of document reached while in experience section. Adding remaining lines.")
+        relevant_text_for_dates += "\n".join(experience_block_lines) + "\n\n"
+
+    logger.info("--- FINISHED EXPERIENCE SECTION SEARCH ---")
+    logger.info(f"EXPERIENCE BLOCK TEXT:\n{relevant_text_for_dates.strip()[:500]}")
+
+    if not relevant_text_for_dates.strip():
+        logger.info("No content extracted from experience sections.")
+        return 0
+
+    # ✅ Normalize ALL dash-like characters to a regular hyphen (-)
+    relevant_text_for_dates = relevant_text_for_dates.replace("–", "-").replace("—", "-").replace("\u2013", "-").replace("\u2014", "-").replace("−", "-").replace("‐", "-")
+
+    # ✅ Fix missing space between month and year (e.g., Feb2020 → Feb 2020)
+    relevant_text_for_dates = re.sub(
+        r'(?i)\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(\d{4})',
+        r'\1 \2',
+        relevant_text_for_dates
+    )
+
+    # 🔍 Final date range regex: supports full + short months, various dashes, Present/etc.
+    date_range_pattern = r"(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}|\b\d{4})\s*(?:to|\-|\–|\—|–|—|until)?\s*(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}|\b\d{4}|Present|Current|Till Date|To Date|Ongoing|Now)"
+
+    parsed_durations = []
+    date_flags = re.IGNORECASE
+
+    # 🧪 Debug log: preview matches
+    test_matches = re.findall(date_range_pattern, relevant_text_for_dates, date_flags)
+    logger.info(f"Manual match test found {len(test_matches)} range(s): {test_matches}")
+
     try:
         matches = re.finditer(date_range_pattern, relevant_text_for_dates, date_flags)
         for match in matches:
-            start_str, end_str = match.groups(); logger.debug(f"Found date range: '{start_str}' to '{end_str}'")
+            start_str, end_str = match.groups()
+            logger.debug(f"Found potential date range: '{start_str}' to '{end_str}'")
             try:
-                start_date = dateparser.parse(start_str, settings={'PREFER_DATES_FROM': 'past', 'REQUIRE_MONTH_Y_OR_DAY': True})
-                end_date_obj = datetime.now() if any(keyword in end_str.lower() for keyword in ["present", "current", "till date", "to date", "ongoing", "now"]) else dateparser.parse(end_str, settings={'PREFER_DATES_FROM': 'past', 'REQUIRE_MONTH_Y_OR_DAY': True})
-                if start_date and end_date_obj and end_date_obj > start_date:
-                    duration_years = (end_date_obj - start_date).days / 365.25
-                    if 0 < duration_years < 40: parsed_durations.append(duration_years); logger.debug(f"  -> Parsed: {start_date.strftime('%Y-%m')} to {end_date_obj.strftime('%Y-%m')} = {duration_years:.2f} yrs")
-                    else: logger.debug(f"  -> Duration out of range ({duration_years:.2f} yrs).")
-                else: logger.debug(f"  -> Could not parse valid start/end for: '{start_str}' to '{end_str}'. Start: {start_date}, End: {end_date_obj}")
-            except Exception as date_parse_err: logger.warning(f"  -> Error parsing date range '{start_str}' - '{end_str}': {date_parse_err}")
-    except Exception as e: logger.error(f"Error processing date ranges: {e}", exc_info=False)
-    if parsed_durations: total_experience_years = sum(parsed_durations); logger.info(f"Total exp from dates in relevant sections: {total_experience_years:.2f} yrs from {len(parsed_durations)} period(s)."); return total_experience_years
-    else: logger.debug("No valid date ranges found to calculate exp duration."); return 0
+                start_date = dateparser.parse(start_str, settings={'PREFER_DATES_FROM': 'past'})
+                end_date = (
+                    datetime.now()
+                    if end_str.strip().lower() in ["present", "current", "till date", "to date", "ongoing", "now"]
+                    else dateparser.parse(end_str, settings={'PREFER_DATES_FROM': 'past'})
+                )
+                if start_date and end_date and end_date > start_date:
+                    duration_years = (end_date - start_date).days / 365.25
+                    if 0 < duration_years < 40:
+                        parsed_durations.append(duration_years)
+                        logger.debug(f"  Parsed: {start_date.strftime('%Y-%m')} to {end_date.strftime('%Y-%m')} = {duration_years:.2f} years")
+            except Exception as parse_err:
+                logger.warning(f"  Error parsing date range '{start_str}' to '{end_str}': {parse_err}")
+    except Exception as e:
+        logger.error(f"Regex match error: {e}", exc_info=True)
+
+    total_experience_years = sum(parsed_durations)
+    logger.info(f"Total experience calculated: {total_experience_years:.2f} years from {len(parsed_durations)} period(s)")
+    return total_experience_years
+
 
 def extract_years_experience(text):
     if not text: return 0
     explicit_mention_years = extract_explicit_years_mention(text)
-    duration_from_dates = extract_experience_durations_from_sections(text)
+    duration_from_dates = extract_experience_durations_from_sections(text) # Calls the refined function
     final_experience_years = max(explicit_mention_years, duration_from_dates)
     logger.info(f"Final determined experience: {final_experience_years:.2f} years (Explicit: {explicit_mention_years}, From Dates: {duration_from_dates:.2f})")
     return final_experience_years
 
 # --- Scoring Component Functions ---
 def calculate_semantic_similarity(text1, text2):
-    if not SENTENCE_TRANSFORMERS_AVAILABLE: logger.warning("ST lib not imported. Skipping semantic similarity."); return 0.0
-    if not sentence_model: logger.warning("ST model not loaded. Skipping semantic similarity."); return 0.0
+    if not SENTENCE_TRANSFORMERS_AVAILABLE: logger.warning("ST lib not imported. Skip semantic similarity."); return 0.0
+    if not sentence_model: logger.warning("ST model not loaded. Skip semantic similarity."); return 0.0
     if not text1 or not text2: logger.debug("Empty text for semantic similarity."); return 0.0
     try:
         embedding1 = sentence_model.encode(text1, convert_to_tensor=True, normalize_embeddings=True)
@@ -374,7 +438,7 @@ def calculate_enhanced_relevance(resume_text, jd_text, required_experience_years
     logger.info(f"Enhanced Relevance: Final={results['final_score']:.4f} (Sem={results['semantic_score']:.3f}, Skill={results['skill_score']:.3f}, Exp={results['experience_score']:.3f})")
     return results
 
-# TF-IDF function can remain as is
+# TF-IDF function
 def calculate_tfidf_cosine_similarity(resume_text, jd_text):
     logger.debug("Calculating TF-IDF..."); processed_resume = preprocess_text(resume_text); processed_jd = preprocess_text(jd_text)
     if not processed_resume or not processed_jd: return 0.0
