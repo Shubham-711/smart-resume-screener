@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 // Get the base URL from the environment variable set in .env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'; // Fallback
 
@@ -47,6 +48,12 @@ export const uploadResumes = (jobId, files) => {
     // Optional: Add upload progress handler here if needed
     // onUploadProgress: progressEvent => { ... }
   });
+};
+
+export const deleteResume = (resumeId) => {
+  const url = `/api/resumes/${resumeId}`; 
+ console.log(`FROM apiService.js -> Deleting resume with ID: ${resumeId} at path: ${url}`);
+  return apiClient.delete(url);;
 };
 
 // Add other API calls (get resume status, download, update job etc.) as needed

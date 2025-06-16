@@ -37,8 +37,7 @@ def get_safe_upload_path(job_id, filename):
 
     # Split name and extension
     name, ext = os.path.splitext(base_filename)
-    if not ext: # Handle files potentially missing extension after securing
-        # Try to guess from original filename if possible, otherwise default
+    if not ext:
         original_ext = os.path.splitext(filename)[1].lower()
         if original_ext and original_ext != '.':
              ext = original_ext
@@ -49,7 +48,7 @@ def get_safe_upload_path(job_id, filename):
     # Construct unique filename: original_name_prefix.ext
     unique_filename = f"{name}_{unique_prefix}{ext}"
 
-    # Define the path relative to the UPLOAD_FOLDER (this is stored in DB)
+   
     # Example: 'Software_Engineer_Resume_a1b2c3d4.pdf'
     relative_path = unique_filename
 
@@ -91,7 +90,7 @@ def upload_resumes(job_id):
         logger.warning(f"Resume upload failed for job {job_id}: No files selected.")
         return jsonify({"error": "No selected files"}), 400
 
-    uploaded_resume_objects = [] # List to hold successfully created Resume model objects
+    uploaded_resume_objects = [] 
     errors = {} # Dictionary to hold errors for specific files
 
     for file in files:
@@ -214,14 +213,7 @@ def get_resume_status(resume_id):
         # Find the resume by ID or return 404
         resume = Resume.query.get_or_404(resume_id, description=f"Resume with ID {resume_id} not found.")
 
-        # Optional: Add logic here to check Celery task status if you store task_id on the Resume model
-        # task_info = {}
-        # if resume.task_id:
-        #    try:
-        #        task = process_resume.AsyncResult(resume.task_id)
-        #        task_info = {'task_id': resume.task_id, 'task_status': task.state}
-        #    except Exception as celery_err:
-        #        logger.warning(f"Could not get Celery task status for task ID {resume.task_id}: {celery_err}")
+
 
         logger.info(f"Retrieved status for resume ID: {resume_id} (Status: {resume.status.name})")
         # Serialize the single resume object
@@ -274,3 +266,24 @@ def download_resume(resume_id):
         # Catch other potential errors (e.g., permissions, network issues)
         logger.error(f"Error during download attempt for resume {resume_id}: {e}", exc_info=True)
         return jsonify({"error": "Internal server error: Could not download file."}), 500
+        
+@bp.route('/resumes/<int:resume_id>', methods=['DELETE'])
+def delete_resume(resume_id):
+    """Deletes a resume by ID."""
+    try:
+        resume = Resume.query.get_or_404(resume_id, description=f"Resume with ID {resume_id} not found.")
+
+        # Optional: Also delete the resume file from disk
+        file_path_abs = os.path.join(os.path.abspath(current_app.config['UPLOAD_FOLDER']), resume.filepath)
+        if os.path.exists(file_path_abs):
+            os.remove(file_path_abs)
+
+        db.session.delete(resume)
+        db.session.commit()
+        logger.info(f"Deleted resume ID: {resume_id}")
+
+        return jsonify({'message': f'Resume {resume_id} deleted successfully'}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting resume {resume_id}: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error: Failed to delete resume.'}), 500
