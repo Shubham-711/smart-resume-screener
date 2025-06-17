@@ -1,89 +1,145 @@
 // frontend/src/pages/HomePage.jsx
 import React from 'react';
-import { Box, Typography, Paper, Button } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom'; // For navigation buttons
+import { Box, Typography, Paper, Button, useTheme } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { motion } from 'framer-motion'; // Import motion
+import { glassMorphismSx, glowButtonSx } from '../styles/commonStyles';
 
-// Reusable sx prop for glass-like Paper (can be moved to a shared styles file later)
-const glassPaperSx = {
-  p: { xs: 2, sm: 3, md: 4 },
-  backgroundColor: 'rgba(31, 35, 44, 0.7)', // theme.palette.background.paper with more transparency
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
-  border: '1px solid rgba(255, 255, 255, 0.12)',
-  borderRadius: '16px', // More rounded
-  textAlign: 'center', // Center text within the paper
-  maxWidth: '800px', // Limit width
-  mx: 'auto', // Center the paper itself if its parent is a flex container
-  color: 'text.primary',
+
+// Animation variants for Framer Motion
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: 0.2,
+      staggerChildren: 0.2, // Animate children one after another
+      when: "beforeChildren"
+    }
+  }
 };
 
-const glowButtonSx = { // Reusing a similar button style
-    fontWeight: 'bold',
-    mt: 3,
-    mb: 1,
-    minWidth: '150px',
-    boxShadow: {
-      xs: 'none',
-      ':hover': theme => `0 0 12px ${theme.palette.primary.light}, 0 0 25px ${theme.palette.primary.light}`
-    },
-    transition: theme => theme.transitions.create(['box-shadow', 'background-color'], {
-      duration: theme.transitions.duration.short,
-    }),
-  };
-
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
+};
 
 function HomePage() {
-  return (
-    // This Box will be centered by the Container in App.jsx
-    // display: flex, flexDirection: column, alignItems: center ensures its children are centered
-    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
-      <Paper elevation={3} sx={glassPaperSx}>
-        <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 700, color: 'primary.light' }}>
-          Welcome to the Smart Resume Screener!
-        </Typography>
-        <Typography variant="h6" color="text.secondary" paragraph sx={{ maxWidth: '600px', mx: 'auto' }}>
-          Streamline your hiring process by automatically screening resumes against job descriptions.
-          Our AI-powered system helps you identify the most relevant candidates quickly and efficiently.
-        </Typography>
-        <Typography variant="body1" paragraph sx={{ mt: 2, maxWidth: '600px', mx: 'auto' }}>
-          Get started by creating a new job posting or viewing existing ones to manage resumes.
-          This tool leverages Natural Language Processing to match skills and rank applicants, saving you valuable time.
-        </Typography>
-        <Box sx={{ mt: 4 }}>
-          <Button
-            component={RouterLink}
-            to="/create-job"
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ ...glowButtonSx, mr: 2 }}
-          >
-            Create New Job
-          </Button>
-          <Button
-            component={RouterLink}
-            to="/jobs" // This currently points to Job List, which is fine as a primary action
-            variant="outlined"
-            color="secondary"
-            size="large"
-            sx={{ ...glowButtonSx, backgroundColor:'secondary.main', color:'white', '&:hover': {backgroundColor: 'secondary.dark'} }}
-          >
-            View Job List
-          </Button>
-        </Box>
-      </Paper>
+  const theme = useTheme();
 
-      {/* You can add more sections here later if needed */}
-      {/* Example:
-      <Paper elevation={3} sx={{...glassPaperSx, mt: 4}}>
-        <Typography variant="h5" gutterBottom>How it Works</Typography>
-        <Typography variant="body1">
-          1. Create a job. 2. Upload resumes. 3. View ranked candidates.
-        </Typography>
-      </Paper>
-      */}
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        minHeight:'calc(100vh - 64px)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        px: 2,
+        py: { xs: 4, sm: 6 },
+      }}
+    >
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        style={{
+          width: '100%',
+          maxWidth: '900px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper
+          elevation={0}
+          component={motion.div}
+          variants={itemVariants}
+          sx={{
+            ...glassMorphismSx(theme),
+            p: { xs: 3, sm: 5, md: 6 },
+            borderRadius: '40px',
+            textAlign: 'center',
+            width: '100%',
+          }}
+        >
+          <Typography
+            variant="h2"
+            component="h1"
+            gutterBottom
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '2rem', sm: '3rem' },
+              color: 'primary.light',
+              lineHeight: 1.2,
+            }}
+          >
+            Welcome to the Smart <br /> Resume Screener!
+          </Typography>
+
+          <Typography
+            variant="h6"
+            color="text.secondary"
+            paragraph
+            sx={{ maxWidth: 650, mx: 'auto', mb: 2 }}
+          >
+            Streamline your hiring process by automatically screening resumes
+            against job descriptions. Our AI-powered system helps you identify
+            the most relevant candidates quickly and efficiently.
+          </Typography>
+
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 500, maxWidth: 650, mx: 'auto', mb: 3 }}
+          >
+            Get started by creating a new job posting or viewing existing ones to
+            manage resumes. This tool leverages Natural Language Processing to match
+            skills and rank applicants, saving you valuable time.
+          </Typography>
+
+          <Box
+            component={motion.div}
+            variants={itemVariants}
+            sx={{
+              mt: 4,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 3,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Button
+              component={motion(RouterLink)}
+              variants={itemVariants}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              to="/create-job"
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={glowButtonSx(theme)}
+            >
+              Create New Job
+            </Button>
+
+            <Button
+              component={motion(RouterLink)}
+              variants={itemVariants}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              to="/jobs"
+              variant="outlined"
+              color="secondary"
+              size="large"
+              sx={glowButtonSx(theme, 'secondary')}
+            >
+              View Job List
+            </Button>
+          </Box>
+        </Paper>
+      </motion.div>
     </Box>
   );
 }
-
 export default HomePage;
