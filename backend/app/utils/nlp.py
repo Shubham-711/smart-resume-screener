@@ -286,11 +286,8 @@ def extract_explicit_years_mention(text):
         logger.error(f"Error during regex for explicit experience years: {e}", exc_info=True)
         return 0
 
-# Inside backend/app/utils/nlp.py
-# Replace the existing extract_experience_durations_from_sections function
 
-# Inside backend/app/utils/nlp.py
-# Replace the existing extract_experience_durations_from_sections function
+
 
 def extract_experience_durations_from_sections(text_content):
     if not text_content:
@@ -302,62 +299,74 @@ def extract_experience_durations_from_sections(text_content):
     experience_section_keywords = [
         "Work Experience", "Experience", "Employment History", "Relevant Experience",
         "Career History", "Professional Experience", "Positions Held",
-        "Work Experience & Projects"
-        # Add common variants like "EXPERIENCE" (all caps) if your regex is case-sensitive elsewhere
+        "Work Experience & Projects", "RELEVANT EXPERIENCE", "WORK EXPERIENCE",
+        "PROFESSIONAL EXPERIENCE", "EMPLOYMENT HISTORY", "EXPERIENCE"
+        # Added common variants including all caps versions
     ]
+    
     # Keywords that strongly indicate the end of work experience for date parsing
-    # These should be headers that if encountered, we stop considering the text for work experience dates
     section_terminators = [
         "Education", "Academic Background", "Degrees", "Certifications", "Skills",
         "Technical Skills", "Projects", "OpenSource Contributions", "Achievements",
         "Popular Blogs", "Awards", "Publications", "References", "Languages",
-        "Summary", "Objective", "Personal Details", "Contact", "CODING PROFILES" # Added from Aishwarya's resume
+        "Summary", "Objective", "Personal Details", "Contact", "CODING PROFILES",
+        "PROJECTS", "OPENSOURCE CONTRIBUTIONS", "SKILLS", "EDUCATION", "ACHIEVEMENTS",
+        "POPULAR BLOGS"  # Added uppercase versions
     ]
 
     lines = text_content.splitlines()
     relevant_text_for_dates = ""
-    in_experience_section = False # Flag to track if we are currently inside an experience block
+    in_experience_section = False
+    current_block_lines = []
 
     logger.info("--- STARTING EXPERIENCE SECTION SEARCH (Strict) ---")
+    logger.info(f"Total lines in document: {len(lines)}")
 
-    current_block_lines = []
     for i, line in enumerate(lines):
         line_stripped = line.strip()
         line_lower = line_stripped.lower()
-
-        # Check if this line is an experience header (case-insensitive exact match of the whole line)
-        is_experience_header = any(kw.lower() == line_lower for kw in experience_section_keywords)
         
-        # Check if this line is a terminator header (case-insensitive exact match of the whole line)
-        is_terminator_header = any(kw.lower() == line_lower for kw in section_terminators)
+        # More flexible header matching - check if line contains experience keywords
+        is_experience_header = False
+        for kw in experience_section_keywords:
+            if kw.lower() in line_lower:
+                # Additional check: the keyword should be prominent in the line (not just a small part)
+                if len(kw) / len(line_stripped) > 0.5 or line_lower == kw.lower():
+                    is_experience_header = True
+                    break
+        
+        # More flexible terminator matching
+        is_terminator_header = False
+        for kw in section_terminators:
+            if kw.lower() in line_lower:
+                if len(kw) / len(line_stripped) > 0.5 or line_lower == kw.lower():
+                    is_terminator_header = True
+                    break
 
         if is_experience_header:
-            # If we were already in an experience section, process the previous block
             if in_experience_section and current_block_lines:
                 logger.info(f"  New experience header '{line_stripped}' found, processing previous block.")
                 relevant_text_for_dates += "\n".join(current_block_lines).strip() + "\n\n"
             
             logger.info(f"MATCHED Experience Header: '{line_stripped}' at line index {i}")
             in_experience_section = True
-            current_block_lines = [] # Start a new block
-            continue # Skip the header line itself from being added to content
+            current_block_lines = []
+            continue
 
         if is_terminator_header:
-            if in_experience_section: # If we were in an experience section and hit a terminator
+            if in_experience_section:
                 logger.info(f"ENDER Found: '{line_stripped}' at line index {i}. Finalizing current experience block.")
                 if current_block_lines:
                     relevant_text_for_dates += "\n".join(current_block_lines).strip() + "\n\n"
-            in_experience_section = False # No longer in an experience section (or weren't to begin with)
-            current_block_lines = [] # Reset block
-            # Don't 'continue' here, as a terminator might also be an experience header for a new role
-            # (though unlikely with current keyword lists)
+            in_experience_section = False
+            current_block_lines = []
 
-        if in_experience_section and line_stripped: # Only add non-empty lines
+        if in_experience_section and line_stripped:
             current_block_lines.append(line_stripped)
-            if len(current_block_lines) < 6: # Log first few lines of the section being built
-                 logger.debug(f"  Adding to current experience block: '{line_stripped}'")
+            if len(current_block_lines) <= 10:  # Log first 10 lines
+                logger.debug(f"  Adding to current experience block (line {i}): '{line_stripped}'")
 
-    # After the loop, if we were still in an experience section, add the last block
+    # Handle case where document ends while still in experience section
     if in_experience_section and current_block_lines:
         logger.info("End of document reached while in an experience section. Adding final block.")
         relevant_text_for_dates += "\n".join(current_block_lines).strip() + "\n\n"
@@ -365,71 +374,138 @@ def extract_experience_durations_from_sections(text_content):
     logger.info("--- FINISHED EXPERIENCE SECTION SEARCH ---")
     
     if not relevant_text_for_dates.strip():
-        logger.info("No text content extracted from identified experience sections for date parsing.")
+        logger.warning("No text content extracted from identified experience sections for date parsing.")
+        # Log first 20 lines of the document for debugging
+        logger.info("First 20 lines of document for debugging:")
+        for i, line in enumerate(lines[:20]):
+            logger.info(f"Line {i}: '{line.strip()}'")
         return 0
     else:
-        # Log the *entire* text block that will be scanned for dates
-        logger.info(f"Text content identified for date parsing (length {len(relevant_text_for_dates.strip())}):\n<<<<<<<<<<\n{relevant_text_for_dates.strip()}\n>>>>>>>>>>")
+        logger.info(f"Text content identified for date parsing (length {len(relevant_text_for_dates.strip())}):")
+        logger.info(f"<<<<<<<<<<\n{relevant_text_for_dates.strip()}\n>>>>>>>>>>")
 
-    # --- Date Range Parsing (using the pattern you confirmed works) ---
-    # (The date_range_pattern and the loop with dateparser remain the same as the previous correct version)
-    # Normalize dashes and fix month-year spacing
-    relevant_text_for_dates = relevant_text_for_dates.replace("–", "-").replace("—", "-").replace("\u2013", "-").replace("\u2014", "-").replace("−", "-").replace("‐", "-")
+    # --- Enhanced Date Range Parsing ---
+    # Normalize various dash types and fix spacing
+    relevant_text_for_dates = relevant_text_for_dates.replace("–", " - ").replace("—", " - ")
+    relevant_text_for_dates = relevant_text_for_dates.replace("\u2013", " - ").replace("\u2014", " - ")
+    relevant_text_for_dates = relevant_text_for_dates.replace("−", " - ").replace("‐", " - ")
+    
+    # Fix month-year spacing issues
     relevant_text_for_dates = re.sub(r'(?i)\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(\d{4})', r'\1 \2', relevant_text_for_dates)
-    relevant_text_for_dates = re.sub(r'-(?=(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Present|Current|Now))', r'- ', relevant_text_for_dates, flags=re.IGNORECASE)
     relevant_text_for_dates = re.sub(r'\s+', ' ', relevant_text_for_dates).strip()
 
-    date_range_pattern = r"""(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t\.?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{2,4}|\b\d{4}\b)\s*(?:to|-|–|—|until)\s*(\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t\.?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{2,4}|\b\d{4}\b|Present|Current|Till\sDate|To\sDate|Ongoing|Now)"""
-    date_flags = re.IGNORECASE # | re.VERBOSE # Verbose not needed if pattern is a single string
+    # Enhanced date range pattern - more flexible
+    date_range_pattern = r"""
+        (
+            \b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t\.?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s*\d{2,4}
+            |
+            \b\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}
+            |
+            \b\d{4}\b
+        )
+        \s*
+        (?:to|until|\-|–|—|\s+\-\s+)
+        \s*
+        (
+            \b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t\.?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s*\d{2,4}
+            |
+            \b\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}
+            |
+            \b\d{4}\b
+            |
+            Present|Current|Till\s+Date|To\s+Date|Ongoing|Now
+        )
+    """
+    
+    date_flags = re.IGNORECASE | re.VERBOSE
 
     parsed_durations = []
-    # total_experience_years = 0 # Already initialized at the top
 
-    test_matches = re.findall(date_range_pattern, relevant_text_for_dates, date_flags)
-    logger.info(f"Date range regex found {len(test_matches)} potential match(es): {test_matches}")
+    # Debug: show what we're searching in
+    logger.info(f"Searching for date patterns in: '{relevant_text_for_dates}'")
     
     try:
-        matches = re.finditer(date_range_pattern, relevant_text_for_dates, date_flags)
-        for match_idx, match in enumerate(matches): # Added index for logging
+        matches = list(re.finditer(date_range_pattern, relevant_text_for_dates, date_flags))
+        logger.info(f"Date range regex found {len(matches)} potential match(es)")
+        
+        for match_idx, match in enumerate(matches):
             start_str, end_str = match.groups()
-            logger.debug(f"  Match {match_idx+1}: Trying to parse range: '{start_str}' to '{end_str}'")
+            full_match = match.group(0)
+            logger.info(f"  Match {match_idx+1}: Full match: '{full_match}' -> Parsing '{start_str}' to '{end_str}'")
+            
             try:
-                start_date = dateparser.parse(start_str, settings={'PREFER_DATES_FROM': 'past', 'STRICT_PARSING': False}) # Relaxed parsing
+                # More flexible date parsing
+                start_date = dateparser.parse(start_str.strip(), settings={
+                    'PREFER_DATES_FROM': 'past', 
+                    'STRICT_PARSING': False,
+                    'DATE_ORDER': 'MDY'
+                })
+                
                 end_date_obj = None
-                if any(keyword in end_str.lower() for keyword in ["present", "current", "till date", "to date", "ongoing", "now"]):
+                end_str_clean = end_str.strip()
+                
+                if any(keyword in end_str_clean.lower() for keyword in ["present", "current", "till date", "to date", "ongoing", "now"]):
                     end_date_obj = datetime.now()
+                    logger.debug(f"    End date is current: {end_date_obj.strftime('%Y-%m-%d')}")
                 else:
-                    end_date_obj = dateparser.parse(end_str, settings={'PREFER_DATES_FROM': 'past', 'STRICT_PARSING': False}) # Relaxed parsing
+                    end_date_obj = dateparser.parse(end_str_clean, settings={
+                        'PREFER_DATES_FROM': 'past', 
+                        'STRICT_PARSING': False,
+                        'DATE_ORDER': 'MDY'
+                    })
 
-                if start_date and end_date_obj and end_date_obj >= start_date: # Allow same month/year
-                    duration_days = (end_date_obj - start_date).days
-                    duration_years = duration_days / 365.25
-                    if -0.1 < duration_years < 40: # Allow slightly negative for same month, adjust min later
-                        if duration_years < 0 : duration_years = 0.08 # ~1 month if same month end before start
-                        parsed_durations.append(duration_years)
-                        logger.info(f"    -> PARSED OK: {start_date.strftime('%Y-%m')} to {end_date_obj.strftime('%Y-%m')} = {duration_years:.2f} years")
-                    else: logger.debug(f"    -> Duration out of range ({duration_years:.2f} yrs). Skipping.")
-                else: logger.debug(f"    -> Could not parse valid start/end dates OR end_date not after start_date. Start: {start_date}, End: {end_date_obj}")
+                logger.debug(f"    Parsed start_date: {start_date}")
+                logger.debug(f"    Parsed end_date: {end_date_obj}")
+
+                if start_date and end_date_obj:
+                    if end_date_obj >= start_date:
+                        duration_days = (end_date_obj - start_date).days
+                        duration_years = duration_days / 365.25
+                        
+                        if 0 <= duration_years <= 50:  # Reasonable range
+                            parsed_durations.append(duration_years)
+                            logger.info(f"    -> PARSED OK: {start_date.strftime('%b %Y')} to {end_date_obj.strftime('%b %Y')} = {duration_years:.2f} years ({duration_days} days)")
+                        else:
+                            logger.warning(f"    -> Duration out of reasonable range ({duration_years:.2f} years). Skipping.")
+                    else:
+                        logger.warning(f"    -> End date ({end_date_obj}) is before start date ({start_date}). Skipping.")
+                else:
+                    logger.warning(f"    -> Could not parse dates. Start: {start_date}, End: {end_date_obj}")
+                    
             except Exception as date_parse_err:
-                logger.warning(f"    -> Error parsing specific date range '{start_str}' - '{end_str}': {date_parse_err}")
+                logger.error(f"    -> Error parsing date range '{start_str}' - '{end_str}': {date_parse_err}")
+                
     except Exception as e:
-        logger.error(f"Error processing date ranges with re.finditer: {e}", exc_info=False)
+        logger.error(f"Error processing date ranges with regex: {e}", exc_info=True)
 
     if parsed_durations:
         total_experience_years = sum(parsed_durations)
-        logger.info(f"Total experience calculated from date ranges: {total_experience_years:.2f} years from {len(parsed_durations)} period(s).")
+        logger.info(f"SUCCESS: Total experience calculated: {total_experience_years:.2f} years from {len(parsed_durations)} period(s)")
+        logger.info(f"Individual durations: {[f'{d:.2f}' for d in parsed_durations]}")
     else:
-        logger.info("No valid date ranges successfully parsed from identified experience text.") # Changed from debug to info
+        logger.warning("No valid date ranges successfully parsed from identified experience text.")
+        
     return total_experience_years
 
 
-
 def extract_years_experience(text):
-    if not text: return 0
+    if not text: 
+        logger.warning("extract_years_experience: Received empty text")
+        return 0
+        
+    logger.info("=== STARTING EXPERIENCE EXTRACTION ===")
+    
     explicit_mention_years = extract_explicit_years_mention(text)
-    duration_from_dates = extract_experience_durations_from_sections(text) # Calls the refined function
+    duration_from_dates = extract_experience_durations_from_sections(text)
+    
     final_experience_years = max(explicit_mention_years, duration_from_dates)
-    logger.info(f"Final determined experience: {final_experience_years:.2f} years (Explicit: {explicit_mention_years}, From Dates: {duration_from_dates:.2f})")
+    
+    logger.info(f"=== FINAL RESULT ===")
+    logger.info(f"Explicit mention: {explicit_mention_years} years")
+    logger.info(f"From date ranges: {duration_from_dates:.2f} years") 
+    logger.info(f"Final experience: {final_experience_years:.2f} years")
+    logger.info("=== END EXPERIENCE EXTRACTION ===")
+    
     return final_experience_years
 
 # --- Scoring Component Functions ---
