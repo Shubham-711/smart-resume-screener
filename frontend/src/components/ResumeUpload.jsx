@@ -3,8 +3,9 @@ import React, { useState, useRef } from 'react';
 import { uploadResumes } from '../api/apiService';
 import {
   Box, Button, Typography, List, ListItem, ListItemIcon, ListItemText,
-  CircularProgress, Alert, Paper, useTheme // Added Paper, useTheme
+  CircularProgress, Alert, Paper, useTheme,alpha // Added Paper, useTheme
 } from '@mui/material';
+
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
