@@ -9,7 +9,10 @@ import JobDetailPage from './pages/JobDetailPage';
 import CreateJobPage from './pages/CreateJobPage';
 
 
+
+
 import PageWrapper from './components/PageWrapper';
+
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -29,8 +32,8 @@ function AnimatedRoutes() {
 function App() {
   return (
     <Router>
-      <AnimatedBackground/>
-
+    
+       
       <AppBar position="fixed" sx={{ background: 'rgba(20,20,20,0.8)', backdropFilter: 'blur(10px)' }}>
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography
