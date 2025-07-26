@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "backend"
+version = "0.1.0"
+description = ""
+packages = [{include = "app"}]
+authors = ["Shubham Kumavat <shubhamkumavat639@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+flask = "*"
+flask-sqlalchemy = "*"
+flask-cors = "*"
+psycopg2-binary = "*"
+python-dotenv = "*"
+gunicorn = "*"
+celery = {extras = ["redis"], version = "*"}
+spacy = "*"
+sentence-transformers = "*"
+python-docx = "*"
+PyPDF2 = "*"
+gensim = "<4.0"
+cython = "^3.1.2"
+gevent = "^25.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

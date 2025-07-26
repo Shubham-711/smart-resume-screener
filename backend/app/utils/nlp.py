@@ -45,7 +45,7 @@ ensure_nltk_resource('tokenizers/punkt', 'punkt tokenizer data')
 ensure_nltk_resource('corpora/stopwords', 'stopwords corpus')
 
 # --- Globals / Setup ---
-NLP_MODEL_NAME = "en_core_web_lg" # Using large model as per your last successful load
+NLP_MODEL_NAME = "en_core_web_sm" # Using large model as per your last successful load
 SENTENCE_MODEL_NAME = 'all-MiniLM-L6-v2'
 W_SEMANTIC = 0.35; W_SKILL = 0.45; W_EXPERIENCE = 0.20
 
